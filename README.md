@@ -13,7 +13,12 @@ The entire application (App, Database, Cache) is containerized. You can run it w
 Open your terminal in the project root and run:
 
 ```bash
-docker-compose up --build
+sudo docker compose up --build
+```
+
+Seed the database using
+```bash
+npx tsx src/seed.ts
 ```
 
 Access the application at: **[http://localhost:3000](http://localhost:3000)**
@@ -29,8 +34,8 @@ The application is configured to **automatically seed** the database on the firs
 
 If you ever need to reset/re-seed manually:
 ```bash
-docker-compose down -v  # Deletes volumes/data
-docker-compose up --build
+docker compose down -v  # Deletes volumes/data
+docker compose up --build
 ```
 
 ---
