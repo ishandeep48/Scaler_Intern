@@ -7,7 +7,8 @@ import RightSidebar from '@/components/Layout/RightSidebar';
 import QuizCard from '@/components/Quiz/QuizCard';
 import AuthModal from '@/components/AuthModal';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2, Lock } from 'lucide-react';
+import { Loader2, Lock, RotateCcw } from 'lucide-react';
+import { toast } from 'sonner';
 
 const fetcher = async (url: string) => {
     const res = await fetch(url);
@@ -50,24 +51,44 @@ export default function Home() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    userId: user.id, // Explicitly send ID as requested, though backend prefers cookie
+                    userId: user.id,
                     questionId: data.question._id,
                     answer,
-                    idempotencyKey: Math.random().toString()
+                    idempotencyKey: Math.random().toString() // Client side uniqueness for the request itself
                 }),
             });
 
             const result = await res.json();
 
-            // Optimistic update delays
-            setTimeout(() => {
-                mutate(`/api/quiz/next`);
-            }, 1200);
+            // If duplicate submission, result will have duplicate: true, but we should still move on.
+            // We use optimistic updates or just wait for revalidation.
 
             return result;
         } catch (err) {
             console.error("Answer submission failed", err);
             return { correct: false };
+        } finally {
+            // ALWAYS revalidate to get the next question, regardless of success/fail/duplicate
+            // Use setTimeout to allow the animation to play a bit if needed, or immediate.
+            // Previous code had 1200ms. Let's keep it but ensure it runs.
+            setTimeout(() => {
+                mutate(`/api/quiz/next`);
+            }, 1200);
+        }
+    };
+
+    const handleReset = async () => {
+        if (!confirm('Are you sure you want to reset your progress? This cannot be undone.')) return;
+
+        try {
+            const res = await fetch('/api/user/reset', { method: 'POST' });
+            if (!res.ok) throw new Error('Reset failed');
+
+            toast.success('Progress reset successfully');
+            mutate(`/api/quiz/next`);
+        } catch (error) {
+            toast.error('Failed to reset progress');
+            console.error(error);
         }
     };
 
@@ -173,6 +194,17 @@ export default function Home() {
                     ) : (
                         <QuizCard question={data?.question} onAnswer={handleAnswer} />
                     )}
+
+                    {/* Reset Button (Bottom Right or positioned appropriately) */}
+                    <div className="absolute bottom-4 right-4 opacity-50 hover:opacity-100 transition-opacity">
+                        <button
+                            onClick={handleReset}
+                            className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                            title="Reset Progress"
+                        >
+                            <RotateCcw className="w-4 h-4" />
+                        </button>
+                    </div>
                 </section>
 
                 {/* Right Sidebar */}

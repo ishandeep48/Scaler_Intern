@@ -21,23 +21,67 @@ export async function GET(req: NextRequest) {
         }
 
         const userId = decoded.userId;
-
         const user = await User.findById(userId);
         if (!user) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        // 2. Fetch a random question for the user's difficulty
-        const questions = await Question.aggregate([
-            { $match: { difficulty: user.currentDifficulty } },
+        // Filter out questions used in this session (cycle)
+        const excludeIds = user.usedQuestionIds || [];
+
+        // 1. Try to find a question at current difficulty NOT in used
+        let questions = await Question.aggregate([
+            {
+                $match: {
+                    difficulty: user.currentDifficulty,
+                    _id: { $nin: excludeIds }
+                }
+            },
             { $sample: { size: 1 } }
         ]);
 
         let question = questions[0];
 
-        // Fallback: If no questions at this difficulty, find ANY question
+        // 2. Fallback: If no questions at this difficulty (excluding used), 
+        // try expanding search to adjacent difficulties (+/- 1)
         if (!question) {
-            console.log(`No questions found for difficulty ${user.currentDifficulty}, fetching fallback.`);
+            console.log(`No unique questions found for difficulty ${user.currentDifficulty}, expanding search.`);
+            const minDiff = Math.max(1, user.currentDifficulty - 1);
+            const maxDiff = Math.min(10, user.currentDifficulty + 1);
+
+            questions = await Question.aggregate([
+                {
+                    $match: {
+                        difficulty: { $gte: minDiff, $lte: maxDiff },
+                        _id: { $nin: excludeIds }
+                    }
+                },
+                { $sample: { size: 1 } }
+            ]);
+            question = questions[0];
+        }
+
+        // 3. Cycle Reset: If STILL no question, it means the user has exhausted ALL valid questions for their level/range (or entire DB).
+        // Only then do we clear the 'usedQuestionIds' to start a new cycle.
+        if (!question) {
+            console.log(`User exhausted all questions (Cycle Complete). Resetting usedQuestionIds.`);
+
+            await User.updateOne({ _id: userId }, { $set: { usedQuestionIds: [] } });
+
+            // Try again without exclusions
+            questions = await Question.aggregate([
+                {
+                    $match: {
+                        difficulty: user.currentDifficulty
+                    }
+                },
+                { $sample: { size: 1 } }
+            ]);
+            question = questions[0];
+        }
+
+        // 4. Absolute Fallback
+        if (!question) {
             const fallback = await Question.aggregate([{ $sample: { size: 1 } }]);
             question = fallback[0];
         }
@@ -46,14 +90,14 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: 'No questions in DB.' }, { status: 404 });
         }
 
-        // 3. Return Data
         return NextResponse.json({
             user: {
                 id: user._id,
                 username: user.username,
                 score: user.currentScore,
                 streak: user.currentStreak,
-                difficulty: user.currentDifficulty
+                difficulty: user.currentDifficulty,
+                stateVersion: user.stateVersion || 0
             },
             question: {
                 _id: question._id,
