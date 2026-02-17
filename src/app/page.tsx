@@ -50,12 +50,10 @@ export default function Home() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    questionId: data.question._id, // API expects questionId
+                    userId: user.id, // Explicitly send ID as requested, though backend prefers cookie
+                    questionId: data.question._id,
                     answer,
                     idempotencyKey: Math.random().toString()
-                    // userId is inferred from cookie in the backend now? 
-                    // Wait, did I update /api/quiz/answer to use cookie?
-                    // I only updated /api/quiz/next. I MUST update /answer too!
                 }),
             });
 
