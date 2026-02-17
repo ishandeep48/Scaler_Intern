@@ -62,5 +62,8 @@ docker compose up --build
 - `src/lib/gameLogic.ts`: The core "Stabilizer" algorithm for difficulty adjustment.
 - `scripts/seed.ts`: Database population script.
 
+## Video
+Here is the video link as it was too big to upload here
+https://youtu.be/YIF-lMTumbY
 ---
 **Author**: Ishan Deep
