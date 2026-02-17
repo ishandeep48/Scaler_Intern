@@ -7,8 +7,8 @@ import { Trophy, Flame, Loader2, Medal } from 'lucide-react';
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface LeaderboardData {
-    scores: { username: string; value: number }[];
-    streaks: { username: string; value: number }[];
+    scores: { username: string; value: number; score?: number; streak?: number }[];
+    streaks: { username: string; value: number; streak?: number }[];
 }
 
 export function LeaderboardWidget() {
@@ -78,12 +78,21 @@ export function LeaderboardWidget() {
                                     </div>
 
                                     <div className="flex flex-col min-w-0">
-                                        <span className={cn(
-                                            "text-sm font-medium truncate",
-                                            isCurrentUser ? "text-indigo-300" : "text-slate-300 group-hover:text-white"
-                                        )}>
-                                            {entry.username}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span className={cn(
+                                                "text-sm font-medium truncate",
+                                                isCurrentUser ? "text-indigo-300" : "text-slate-300 group-hover:text-white"
+                                            )}>
+                                                {entry.username}
+                                            </span>
+                                            {/* Streak Badge for Score Tab */}
+                                            {activeTab === 'scores' && entry.streak && entry.streak > 0 && (
+                                                <div className="flex items-center gap-1 bg-orange-500/10 text-orange-400 px-1.5 py-0.5 rounded-full text-[10px] border border-orange-500/20">
+                                                    <Flame className="w-3 h-3" />
+                                                    <span>{entry.streak}</span>
+                                                </div>
+                                            )}
+                                        </div>
                                         {isCurrentUser && <span className="text-[10px] text-indigo-400/60 font-semibold uppercase tracking-wide">You</span>}
                                     </div>
                                 </div>

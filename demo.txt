@@ -1,0 +1,104 @@
+PROJECT OVERVIEW & DEMO GUIDE
+
+--------------------------------------------------------------------------------
+1. API ENDPOINTS & DESCRIPTIONS
+--------------------------------------------------------------------------------
+The project uses Next.js App Router API routes located in `src/app/api`.
+
+A. AUTHENTICATION (`src/app/api/auth`)
+- POST /api/auth/register : Creates a new user account with hashed password.
+- POST /api/auth/login    : Authenticates user, issues JWT in HTTP-only cookie.
+- GET  /api/auth/me       : Returns current authenticated user's profile.
+- POST /api/auth/logout   : Clears the authentication cookie.
+
+B. QUIZ ENGINE (`src/app/api/quiz`)
+- GET  /api/quiz/next
+  * Purpose: Fetches the next question for the user.
+  * Logic:
+    1. Checks for user inactivity (>5 mins). If inactive, resets streak and deducts points (Decay).
+    2. Excludes questions already answered in the current session (`usedQuestionIds`).
+    3. Tries to find a question matching the user's `currentDifficulty`.
+    4. If none found, expands search to adjacent difficulties (+/- 1).
+    5. If still none, resets the session cycle (`usedQuestionIds`) and tries again.
+    6. Returns the question payload (prompt, choices) and current user stats.
+
+- POST /api/quiz/answer
+  * Purpose: Submits an answer for validation.
+  * Logic:
+    1. Idempotency Check: Checks `AnswerLog` to prevent duplicate submissions for the same question/user pair.
+    2. Validates the answer against the database.
+    3. Calculates new state (Score, Streak, Difficulty, Momentum) using the "Stabilizer" logic.
+    4. Updates MongoDB User document.
+    5. Updates Redis Leaderboard (Score & Streak) in real-time.
+    6. Returns the result (correct/incorrect), new stats, and correct answer.
+
+C. LEADERBOARD (`src/app/api/leaderboard`)
+- GET  /api/leaderboard
+  * Purpose: Retrieves top players.
+  * Logic: Fetches the top 10 users for both 'score' and 'streak' directly from Redis sorted sets (`zrevrange`).
+
+D. USER MANAGEMENT (`src/app/api/user`)
+- POST /api/user/reset
+  * Purpose: Resets the user's progress (score, streak, difficulty) to initial state.
+
+--------------------------------------------------------------------------------
+2. REDIS USAGE (Caching & Leaderboards)
+--------------------------------------------------------------------------------
+Location: `src/lib/redis.ts` is the main entry point for Redis.
+
+- WHERE IS THE "QUESTION POOL" CACHED?
+  * Note: In the current codebase, Redis is NOT used to cache the question pool.
+  * Questions are fetched directly from MongoDB using Aggregation Pipelines (`$sample`) to ensure randomness and filtration.
+  * Redis is exclusively used for the high-performance Real-time Leaderboard.
+
+- WHERE IS REDIS USED?
+  * Leaderboard Updates: In `/api/quiz/answer`, after every answer, `updateLeaderboard()` is called to update Sorted Sets (`leaderboard:score`, `leaderboard:streak`).
+  * Leaderboard Retrieval: In `/api/leaderboard`, `getTopScorers()` fetches the top ranked users.
+
+--------------------------------------------------------------------------------
+3. THE "mutate()" FUNCTION
+--------------------------------------------------------------------------------
+Location: Used primarily in `src/app/page.tsx` (Homepage).
+
+- WHAT IS IT?
+  * It is a function provided by the `swr` (Stale-While-Revalidate) data fetching library.
+
+- WHAT DOES IT DO?
+  1. Optimistic Updates: When a user answers a question, `mutate` is used to immediately update the local cache of user stats (score/streak) BEFORE the server responds. This makes the UI feel instant.
+  2. Revalidation: After the answer is processed, `mutate('/api/quiz/next')` tells SWR to re-fetch the next question from the server, ensuring the user gets a fresh question.
+  3. Synchronization: `mutate('/api/leaderboard')` is called to refresh the leaderboard data so it reflects the latest score immediately.
+
+--------------------------------------------------------------------------------
+4. COMPONENT LIBRARY
+--------------------------------------------------------------------------------
+Location: `src/components`
+
+- The project does not use a third-party UI library (like MUI or AntD).
+- Instead, it uses a Custom Component System built with:
+  1. Tailwind CSS: For atomic styling and theming.
+  2. Lucide React: For iconography (`Loader2`, `Lock`, `RotateCcw`, etc.).
+  3. Framer Motion: For animations (seen in `QuizCard` transitions).
+  4. Sonner: For the toast notifications.
+
+- Key Components:
+  * `QuizCard.tsx`: The main game interface card.
+  * `DifficultyMeter.tsx`: Visual indicator of current difficulty level.
+  * `LeaderboardWidget.tsx`: Displays the Redis-backed leaderboard.
+  * `AuthModal.tsx`: Handles Login/Register flows.
+
+--------------------------------------------------------------------------------
+5. STREAK ON LEADERBOARD (RECENT UPDATE)
+--------------------------------------------------------------------------------
+The Leaderboard was recently enhanced to show both the 'Total Score' and 'Current Streak' simultaneously.
+
+- WHAT WAS DONE?
+  1. Backend (Redis): Created a new function `getLeaderboardWithStreaks` in `src/lib/redis.ts`. It fetches the top 10 users by score first, then uses a Redis Pipeline to fetch the corresponding streak value for each of those users in a single efficient trip.
+  2. API Layer: Updated `/api/leaderboard` to return this combined data. Instead of just a list of scores, it now returns objects containing `{ username, score, streak }`.
+  3. Frontend:
+     - Updated `RightSidebar.tsx` to include a 🔥 badge next to each user's name showing their current streak.
+     - Updated `LeaderboardWidget.tsx` to include the same streak logic, adding a visual OneUI-style badge.
+     - Highlighted the current user's profile on the board for better context.
+
+- HOW DOES IT SYNC?
+  - Every time a user answers a question in `src/app/page.tsx`, the `mutate('/api/leaderboard')` function is triggered. This forces the leaderboard to re-fetch and immediately reflect both the new score and the updated streak for the user.
+

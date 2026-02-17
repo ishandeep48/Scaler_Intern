@@ -28,6 +28,44 @@ export async function updateLeaderboard(userId: string, username: string, score:
     await pipeline.exec();
 }
 
+export async function getLeaderboardWithStreaks(limit: number = 10) {
+    // 1. Get Top Scorers
+    // Result: [User1, Score1, User2, Score2, ...]
+    const topScorers = await redis.zrevrange('leaderboard:score', 0, limit - 1, 'WITHSCORES');
+
+    if (!topScorers.length) return [];
+
+    const result = [];
+    const pipeline = redis.pipeline();
+
+    // 2. Queue up commands to get streaks for these users
+    for (let i = 0; i < topScorers.length; i += 2) {
+        const username = topScorers[i];
+        pipeline.zscore('leaderboard:streak', username);
+    }
+
+    const streakResults = await pipeline.exec();
+
+    // 3. Merge Data
+    for (let i = 0; i < topScorers.length; i += 2) {
+        const username = topScorers[i];
+        const score = parseFloat(topScorers[i + 1]);
+        // streakResults[i/2] corresponds to the i-th user
+        // result format for ioredis pipeline: [null, result] or [error, result]
+        const streakRes = streakResults ? streakResults[i / 2] : null;
+        const streak = streakRes && streakRes[1] ? parseInt(streakRes[1] as string) : 0;
+
+        result.push({
+            username,
+            value: score, // Mapped to 'value' for frontend compatibility
+            score,        // Keeping 'score' just in case
+            streak
+        });
+    }
+
+    return result;
+}
+
 /**
  * Retrieves the top N users from a specific leaderboard.
  * @param type - 'score' or 'streak'
@@ -44,6 +82,7 @@ export async function getTopScorers(type: 'score' | 'streak' = 'score', limit: n
         parsed.push({
             username: result[i],
             value: parseFloat(result[i + 1]),
+            // For backward compatibility or single-dimension usage
         });
     }
 

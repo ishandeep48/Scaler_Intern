@@ -1,16 +1,19 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getTopScorers } from '@/lib/redis';
+import { getLeaderboardWithStreaks, getTopScorers } from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
     try {
-        const scores = await getTopScorers('score', 10);
+        // New combined data for "Top Scores" tab
+        const scores = await getLeaderboardWithStreaks(10);
+
+        // Keep "Top Streaks" tab working as is (sorted by streak)
         const streaks = await getTopScorers('streak', 10);
 
         return NextResponse.json({
-            scores,
+            scores, // Now contains { username, score, streak }
             streaks
         });
     } catch (error) {

@@ -57,10 +57,19 @@ export default function RightSidebar() {
                                     <span className={i < 3 && !isMe ? "text-white" : isMe ? "text-white" : "text-slate-500"}>#{i + 1}</span>
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className={cn(
-                                        "text-sm font-semibold transition-colors",
-                                        isMe ? "text-indigo-200" : "text-slate-200 group-hover:text-white"
-                                    )}>{user.username} {isMe && '(You)'}</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className={cn(
+                                            "text-sm font-semibold transition-colors",
+                                            isMe ? "text-indigo-200" : "text-slate-200 group-hover:text-white"
+                                        )}>{user.username} {isMe && '(You)'}</span>
+                                        {/* Streak Badge */}
+                                        {user.streak > 0 && (
+                                            <div className="flex items-center gap-1 bg-orange-500/10 text-orange-400 px-2 py-0.5 rounded-full text-[10px] border border-orange-500/20">
+                                                <span role="img" aria-label="streak">🔥</span>
+                                                <span>{user.streak}</span>
+                                            </div>
+                                        )}
+                                    </div>
                                     <span className="text-[10px] text-slate-500 font-mono">Rank {i + 1}</span>
                                 </div>
                             </div>
