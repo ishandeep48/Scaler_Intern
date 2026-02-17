@@ -4,6 +4,7 @@ import { useState } from 'react';
 import useSWR, { mutate } from 'swr';
 import LeftSidebar from '@/components/Layout/LeftSidebar';
 import RightSidebar from '@/components/Layout/RightSidebar';
+import Navbar from '@/components/Navbar';
 import QuizCard from '@/components/Quiz/QuizCard';
 import AuthModal from '@/components/AuthModal';
 import { useAuth } from '@/context/AuthContext';
@@ -31,7 +32,9 @@ export default function Home() {
         user ? `/api/quiz/next` : null,
         fetcher,
         {
-            revalidateOnFocus: false,
+            revalidateOnFocus: true,
+            revalidateOnMount: true,
+            dedupingInterval: 0,
             shouldRetryOnError: false,
             onError: (err) => {
                 if (err.status === 401) {
@@ -60,20 +63,28 @@ export default function Home() {
 
             const result = await res.json();
 
-            // If duplicate submission, result will have duplicate: true, but we should still move on.
-            // We use optimistic updates or just wait for revalidation.
+            // OPTIMISTIC UPDATE: Update stats immediately!
+            if (result && result.user) {
+                // Mutate the SWR cache for /api/quiz/next with the NEW user stats
+                // We keep the OLD question temporarily until the revalidation completes
+                mutate(`/api/quiz/next`, (currentData: any) => ({
+                    ...currentData,
+                    user: result.user // Inject the new score/streak/difficulty
+                }), false); // "false" means don't revalidate immediately (we do that in finally)
+
+                // Also trigger leaderboard update immediately
+                mutate('/api/leaderboard');
+            }
 
             return result;
         } catch (err) {
             console.error("Answer submission failed", err);
             return { correct: false };
         } finally {
-            // ALWAYS revalidate to get the next question, regardless of success/fail/duplicate
-            // Use setTimeout to allow the animation to play a bit if needed, or immediate.
-            // Previous code had 1200ms. Let's keep it but ensure it runs.
-            setTimeout(() => {
-                mutate(`/api/quiz/next`);
-            }, 1200);
+            // Revalidate to get the next question
+            // The stats are already updated optimistically, so the UI feels instant.
+            // Now we just need the new question to load.
+            mutate(`/api/quiz/next`);
         }
     };
 
@@ -122,7 +133,7 @@ export default function Home() {
     if (!user) {
         return (
             <main className="h-screen w-screen flex flex-col bg-slate-950 text-slate-50 overflow-hidden selection:bg-indigo-500/30 relative">
-
+                <Navbar />
                 {/* Background blurred "Locked" State */}
                 <div className="absolute inset-0 z-0 flex items-center justify-center opacity-30 blur-sm pointer-events-none">
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-6 p-4 w-full h-full max-w-7xl">
@@ -163,8 +174,8 @@ export default function Home() {
 
     // AUTHENTICATED STATE
     return (
-        <main className="h-[calc(100vh-4rem)] w-full flex flex-col bg-slate-950 text-slate-50 overflow-hidden selection:bg-indigo-500/30">
-            {/* Navbar is in Layout now */}
+        <main className="h-[calc(100vh)] w-full flex flex-col bg-slate-950 text-slate-50 overflow-hidden selection:bg-indigo-500/30">
+            <Navbar score={displayStats.score} streak={displayStats.streak} difficulty={displayStats.difficulty} />
 
             <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-6 p-4 md:p-6 overflow-hidden h-full">
 

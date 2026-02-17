@@ -4,6 +4,7 @@ import User from '@/models/User';
 import Question from '@/models/Question';
 import AnswerLog from '@/models/AnswerLog';
 import { verifyToken } from '@/lib/auth';
+import { updateLeaderboard } from '@/lib/redis';
 import mongoose from 'mongoose';
 
 export async function POST(req: NextRequest) {
@@ -125,6 +126,14 @@ export async function POST(req: NextRequest) {
         user.stateVersion = (user.stateVersion || 0) + 1;
 
         await user.save();
+
+        // Update Redis Leaderboard (Awaited for consistency)
+        try {
+            await updateLeaderboard(user._id.toString(), user.username, user.currentScore, user.currentStreak);
+        } catch (err) {
+            console.error('Failed to update leaderboard:', err);
+            // We don't block the response if Redis fails, but we did wait for it to try.
+        }
 
         // 7. Log validation
         await AnswerLog.create({
