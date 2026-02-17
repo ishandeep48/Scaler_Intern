@@ -123,6 +123,7 @@ export async function POST(req: NextRequest) {
         user.currentStreak = newStreak;
         user.currentDifficulty = newDifficulty;
         user.momentum = newMomentum;
+        user.lastAnswerAt = new Date();
         user.stateVersion = (user.stateVersion || 0) + 1;
 
         await user.save();

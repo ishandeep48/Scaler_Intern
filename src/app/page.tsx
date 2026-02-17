@@ -36,6 +36,11 @@ export default function Home() {
             revalidateOnMount: true,
             dedupingInterval: 0,
             shouldRetryOnError: false,
+            onSuccess: (data) => {
+                if (data?.user?.decayOccurred) {
+                    toast.warning("Inactivity detected! Streak reset and 50pts deducted.");
+                }
+            },
             onError: (err) => {
                 if (err.status === 401) {
                     // Token expired or invalid

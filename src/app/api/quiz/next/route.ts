@@ -26,6 +26,28 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
+        // --- INACTIVITY DECAY LOGIC (5 Minutes) ---
+        let decayOccurred = false;
+        if (user.lastAnswerAt) {
+            const now = new Date();
+            const lastAnswer = new Date(user.lastAnswerAt);
+            const diffMs = now.getTime() - lastAnswer.getTime();
+            const minutesSinceLastAnswer = diffMs / (1000 * 60);
+
+            // Threshold: 5 Minutes
+            if (minutesSinceLastAnswer > 5 && user.currentStreak > 0) {
+                console.log(`Inactivity Decay Triggered for ${user.username}. Inactive for ${minutesSinceLastAnswer.toFixed(1)} minutes.`);
+
+                user.currentStreak = 0;
+                user.momentum = 0;
+                user.currentDifficulty = 1; // Reset difficulty to 1
+                user.currentScore = Math.max(0, user.currentScore - 50); // Penalty: -50 points
+
+                decayOccurred = true;
+                await user.save();
+            }
+        }
+
         // Filter out questions used in this session (cycle)
         const excludeIds = user.usedQuestionIds || [];
 
@@ -97,7 +119,8 @@ export async function GET(req: NextRequest) {
                 score: user.currentScore,
                 streak: user.currentStreak,
                 difficulty: user.currentDifficulty,
-                stateVersion: user.stateVersion || 0
+                stateVersion: user.stateVersion || 0,
+                decayOccurred // Frontend usage
             },
             question: {
                 _id: question._id,

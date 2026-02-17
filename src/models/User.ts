@@ -12,12 +12,9 @@ export interface IUser extends Document {
     recentQuestions: mongoose.Types.ObjectId[];
     streakQuestionIds: mongoose.Types.ObjectId[];
     usedQuestionIds: mongoose.Types.ObjectId[];
+    lastAnswerAt?: Date;
     stateVersion: number;
 }
-
-
-
-
 
 const UserSchema: Schema = new Schema({
     username: { type: String, required: true, unique: true },
@@ -28,6 +25,7 @@ const UserSchema: Schema = new Schema({
     maxStreak: { type: Number, default: 0 },
     currentDifficulty: { type: Number, default: 1, min: 1, max: 10 },
     momentum: { type: Number, default: 0 },
+    lastAnswerAt: { type: Date },
     recentQuestions: [{ type: Schema.Types.ObjectId, ref: 'Question' }],
     streakQuestionIds: [{ type: Schema.Types.ObjectId, ref: 'Question' }],
     usedQuestionIds: [{ type: Schema.Types.ObjectId, ref: 'Question' }],

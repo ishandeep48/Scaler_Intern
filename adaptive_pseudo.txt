@@ -1,0 +1,37 @@
+function processAnswer(user, questionId, answer):
+  // 1. Idempotency Check (Prevent duplicate submissions)
+  if AnswerLog.exists(user, questionId):
+    return previousResult
+    
+  // 2. Validate Answer
+  isCorrect = (answer == question.correctAnswer)
+  
+  // 3. Adaptive Logic
+  if isCorrect:
+    streak++
+    momentum++
+    // Increase difficulty after 2 consecutive correct answers
+    if momentum >= 2:
+       difficulty = min(10, difficulty + 1)
+       momentum = 0
+    
+    // Calculate Score with Streak Multiplier
+    // Multiplier caps at 2.5x
+    score += (difficulty * 10) * streakMultiplier
+  else:
+    // Reset Streak and Momentum on failure
+    streak = 0
+    momentum = 0
+    // Drop difficulty by 1 (floor at 1)
+    difficulty = max(1, difficulty - 1)
+    
+  // 4. Update User State
+  user.usedQuestionIds.push(questionId)
+  user.currentScore = score
+  user.currentDifficulty = difficulty
+  user.lastAnswerAt = now() // Used for Streak Decay logic
+  
+  await user.save()
+  
+  // 5. Real-Time Sync (Redis)
+  await redis.zadd('leaderboard:score', score, user.username)
