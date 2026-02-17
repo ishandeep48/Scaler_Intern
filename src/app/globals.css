@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Force dark mode background immediately to prevent white flash */
+body {
+    background-color: #020617;
+    color: #f8fafc;
+}

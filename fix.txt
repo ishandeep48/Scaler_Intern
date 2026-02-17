@@ -1,0 +1,77 @@
+**Role:** You are a UI/UX Expert and Tailwind CSS Specialist.
+
+**The Problem:**
+The current Frontend is a disaster. It looks like a raw HTML text dump.
+- The Leaderboard is cluttering the main screen.
+- The Question text is raw and unstyled.
+- The Choices do not look like buttons.
+- There is duplicate text for Score and Streak everywhere.
+- The layout is completely broken (everything is stacked vertically with no spacing).
+
+**The Mission:**
+**Rewrite the Frontend Visual Layer immediately.** Do not touch the backend logic. Focus strictly on `app/page.tsx` and the `components/` folder to make it look like a professional Dark Mode App.
+
+**Style Guide (Strict Enforcement):**
+- **Background:** `bg-slate-950` (Deep Dark Blue/Black).
+- **Cards:** `bg-slate-900` with `border border-slate-800` and `rounded-2xl`.
+- **Text:** `text-slate-100` for headings, `text-slate-400` for secondary text.
+- **Primary Color:** `indigo-500` for buttons.
+- **Accent:** `emerald-500` for correct, `rose-500` for wrong.
+
+---
+
+### **Step 1: Fix the Global Layout (`app/layout.tsx`)**
+Ensure `body` has `h-screen w-screen overflow-hidden bg-slate-950 text-white`.
+
+### **Step 2: Rewrite `app/page.tsx` (The Grid System)**
+Stop dumping components linearly. Use a **Grid Layout**:
+- **Top:** `<Navbar />` (Fixed height `h-16`).
+- **Main:** A centered container for the `<QuizCard />`.
+- **Right/Bottom:** The `<LeaderboardWidget />` should be a Sidebar on desktop (w-80) or a bottom drawer on mobile.
+
+**Code Requirement for `page.tsx`:**
+Use this structure:
+```tsx
+<main className="flex h-screen flex-col bg-slate-950 text-white">
+  <Navbar />
+  <div className="flex flex-1 overflow-hidden">
+    {/* Left/Center: The Game Area */}
+    <section className="flex-1 flex items-center justify-center p-4">
+       {/* Pass the data to QuizCard, handle loading state elegantly */}
+       {question ? <QuizCard question={question} onAnswer={handleAnswer} /> : <LoadingSpinner />}
+    </section>
+
+    {/* Right: The Leaderboard Sidebar (Hidden on mobile, visible on lg screens) */}
+    <aside className="hidden w-80 border-l border-slate-800 bg-slate-900 p-4 lg:block">
+       <LeaderboardWidget />
+    </aside>
+  </div>
+</main>
+Step 3: Beautify components/QuizCard.tsx
+This component looks the worst right now. Rewrite it to look like a high-end card.
+
+Container: w-full max-w-2xl bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl.
+
+Question Text: text-3xl font-bold leading-tight mb-8 text-center text-white.
+
+Choices Grid: Use grid grid-cols-1 md:grid-cols-2 gap-4.
+
+Choice Buttons:
+
+Default: p-6 text-lg font-medium bg-slate-800 hover:bg-slate-700 rounded-xl transition-all border border-slate-700.
+
+Active/Selected: ring-2 ring-indigo-500.
+
+Correction: If isSubmitting and correct, turn GREEN. If wrong, turn RED.
+
+Step 4: Fix components/LeaderboardWidget.tsx
+Stop showing raw JSON/Lists.
+
+Render a clean table or list.
+
+Row Styling: flex justify-between items-center p-3 hover:bg-slate-800 rounded-lg.
+
+Rank Badge: A small circle bg-slate-700 w-8 h-8 flex items-center justify-center rounded-full.
+
+Execution:
+Regenerate the code for app/page.tsx, components/QuizCard.tsx, and components/LeaderboardWidget.tsx NOW. Ensure strict Tailwind styling.
