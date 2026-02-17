@@ -1,20 +1,73 @@
-version: '3.8'
-
 services:
+  app:
+    container_name: brainbolt_app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/brainbolt
+      - REDIS_URL=redis://redis:6379
+      - NEXTAUTH_SECRET=changeme_in_production
+      - NEXT_PUBLIC_API_URL=http://localhost:3000
+    depends_on:
+      - mongo
+      - redis
+      - seeder
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.10'
+          memory: 128M
+
+  seeder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: brainbolt_seeder
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/brainbolt
+    volumes:
+      - ./scripts:/app/scripts
+      - ./src:/app/src
+    command: ["sh", "/app/scripts/entrypoint.sh"]
+    depends_on:
+      - mongo
+
   mongo:
     image: mongo:latest
     container_name: brainbolt_mongo
     ports:
       - "27017:27017"
-    # volumes:
-    #   - ./data/mongo:/data/db
+    volumes:
+      - mongo_data:/data/db
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
 
   redis:
     image: redis:alpine
     container_name: brainbolt_redis
     ports:
       - "6379:6379"
-    # volumes:
-    #   - ./data/redis:/data
+    volumes:
+      - redis_data:/data
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+
+volumes:
+  mongo_data:
+  redis_data:

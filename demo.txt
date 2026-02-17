@@ -99,6 +99,33 @@ The Leaderboard was recently enhanced to show both the 'Total Score' and 'Curren
      - Updated `LeaderboardWidget.tsx` to include the same streak logic, adding a visual OneUI-style badge.
      - Highlighted the current user's profile on the board for better context.
 
-- HOW DOES IT SYNC?
   - Every time a user answers a question in `src/app/page.tsx`, the `mutate('/api/leaderboard')` function is triggered. This forces the leaderboard to re-fetch and immediately reflect both the new score and the updated streak for the user.
+
+--------------------------------------------------------------------------------
+6. CONTAINERIZATION & RESOURCES
+--------------------------------------------------------------------------------
+The application is fully containerized using Docker and Docker Compose.
+
+- HOW TO RUN (SINGLE COMMAND):
+  Run the following command in the root directory:
+  `docker-compose up --build`
+  
+  This will:
+  1. Build the Next.js app image (using a multi-stage Dockerfile for optimization).
+  2. Start MongoDB and Redis containers.
+  3. Start the App container on port 3000.
+
+- RESOURCE CONSTRAINTS:
+  Resource limits are defined in `docker-compose.yml` under `deploy.resources`:
+  - App: 0.5 CPU, 512MB RAM
+  - Mongo: 0.5 CPU, 512MB RAM
+  - Redis: 0.25 CPU, 256MB RAM
+
+- SEEDING:
+  Note: This production build starts with an empty database. 
+  To seed it manually after starting, you can run:
+  `npx ts-node scripts/seed.ts` (Requires local Node environment)
+  OR
+  You can execute it inside the container if the script dependencies are present (which they might not be in the optimized runner image).
+
 

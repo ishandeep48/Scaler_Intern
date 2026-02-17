@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import Question from '@/models/Question';
+import Question from '../src/models/Question';
 import * as dotenv from 'dotenv';
 import path from 'path';
 

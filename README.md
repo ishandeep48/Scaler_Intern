@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BrainBolt - Adaptive Quiz Platform
 
-## Getting Started
+An advanced, AI-driven adaptive quiz application built for the Scaler Full Stack Developer Interview.
 
-First, run the development server:
+## 🚀 Quick Start (Recommended)
+
+The entire application (App, Database, Cache) is containerized. You can run it with a **single command**.
+
+### Prerequisites
+- Docker & Docker Compose installed.
+
+### Run Command
+Open your terminal in the project root and run:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+docker-compose up --build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Access the application at: **[http://localhost:3000](http://localhost:3000)**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## ⚡ Setup & Seeding
 
-## Learn More
+The application is configured to **automatically seed** the database on the first run. 
+- The `seeder` service in Docker Compose waits for MongoDB to be ready.
+- It then executes the population script to inject the initial 150+ questions.
+- The main `app` service waits for the seeder to finish before becoming active.
 
-To learn more about Next.js, take a look at the following resources:
+If you ever need to reset/re-seed manually:
+```bash
+docker-compose down -v  # Deletes volumes/data
+docker-compose up --build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🛠 Tech Stack
 
-## Deploy on Vercel
+- **Frontend/Backend**: Next.js 14 (App Router), TypeScript, Tailwind CSS
+- **Database**: MongoDB (Questions, Users, Logs)
+- **Caching & Leaderboard**: Redis (Real-time Score & Streak tracking)
+- **Infrastructure**: Docker, Docker Compose
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## ✨ Key Features
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **Adaptive Difficulty Engine**: The complexity of questions scales (1-10) based on your performance momentum.
+2. **Real-Time Leaderboard**: Built on **Redis Sorted Sets**, tracking both **Total Score** and **Current Streak** instantly.
+3. **Optimistic UI Updates**: Leveraging `SWR` mutations for instant feedback on answers.
+4. **Inactivity Decay**: If a user is inactive for >5 minutes, their streak resets and score decays (simulated "pressure").
+5. **Idempotency**: Prevents duplicate answer submissions using a unique key/log check.
+
+## 📂 Project Structure
+
+- `src/app/api`: robust API endpoints for Quiz logic, Auth, and Leaderboard.
+- `src/lib/redis.ts`: Redis connection and leaderboard logic (Pipeline implementation).
+- `src/lib/gameLogic.ts`: The core "Stabilizer" algorithm for difficulty adjustment.
+- `scripts/seed.ts`: Database population script.
+
+---
+**Author**: Ishan Deep
